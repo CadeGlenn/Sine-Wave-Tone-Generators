@@ -829,7 +829,7 @@
                   class="frequency"
                   type="range"
                   min="20"
-                  max="5000"
+                  max="2000"
                   step="1"
                   value="440"
                 >
@@ -961,7 +961,7 @@
 
         // The number field is the single frequency readout; keep the slider
         // synchronized, clamping it to its supported range when necessary.
-        frequencySlider.value = Math.min(4000, Math.max(20, frequency));
+        frequencySlider.value = Math.min(2000, Math.max(20, frequency));
         frequencyInput.value = frequency;
 
         // Redraw the individual and combined waveforms.
