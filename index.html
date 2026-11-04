@@ -1,0 +1,1241 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sine Wave Tone Generators</title>
+  <style>
+    /* Minimal, browser-native styling */
+    body {
+      margin: 24px;
+      color: #111;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding-bottom: 210px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .tone {
+      border: 1px solid #bbb;
+      padding: 16px;
+      margin: 14px 0;
+    }
+
+    .tone-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+      gap: 18px;
+      align-items: center;
+    }
+
+    .tone-header, .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .control {
+      display: grid;
+      grid-template-columns: 100px 1fr 85px;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .waveform-wrap {
+      min-width: 0;
+    }
+
+    .waveform-label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: .9rem;
+      color: #555;
+    }
+
+    canvas.waveform {
+      display: block;
+      width: 100%;
+      height: 150px;
+      border: 1px solid #ddd;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .frequency-controls {
+      display: grid;
+      grid-template-columns: minmax(100px, 1fr) 100px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .frequency-number,
+    .volume-number {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px;
+      font-size: 0.95rem;
+    }
+
+    .volume-controls {
+      display: grid;
+      grid-template-columns: minmax(100px, 1fr) 100px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .color-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tone-color {
+      width: 52px;
+      height: 32px;
+      padding: 2px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 480px) {
+      .frequency-controls,
+      .volume-controls {
+        grid-template-columns: minmax(80px, 1fr) 85px;
+        gap: 8px;
+      }
+    }
+
+    output {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    button {
+      padding: 7px 13px;
+      cursor: pointer;
+    }
+
+    .status {
+      color: #555;
+      font-size: .9rem;
+    }
+
+    /* Master footer */
+    #master {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid #aaa;
+      padding: 12px 20px;
+      z-index: 10;
+    }
+
+    #master-inner {
+      width: 100%;
+      max-width: 1500px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+    }
+
+    #master-controls {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .master-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Keep the master-volume controls inside their own footer column. */
+    #master-controls .control {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+      margin: 12px 0;
+      min-width: 0;
+    }
+
+    #master-controls .volume-controls {
+      grid-template-columns: minmax(0, 1fr) 76px;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .view-window-control {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 76px;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0;
+      min-width: 0;
+    }
+
+    .view-window-control input {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      padding: 6px;
+    }
+
+    #master-controls input[type="range"],
+    #master-controls .volume-number {
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Two combined graphs on the right */
+    #master-graphs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .master-graph {
+      min-width: 0;
+    }
+
+    .master-graph-title {
+      display: block;
+      font-size: .85rem;
+      margin-bottom: 5px;
+    }
+
+    .master-graph canvas {
+      display: block;
+      width: 100%;
+      height: 105px;
+      border: 1px solid #ddd;
+    }
+
+    .master-view-label {
+      margin: 4px 0 0;
+      font-size: .75rem;
+      text-align: right;
+    }
+
+    .wave-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px 9px;
+      font-size: .72rem;
+      margin-top: 4px;
+      max-height: 34px;
+      overflow: auto;
+    }
+
+    .legend-item {
+      white-space: nowrap;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        margin: 16px;
+      }
+
+      main {
+        padding-bottom: 290px;
+      }
+
+      .tone-layout {
+        grid-template-columns: 1fr;
+      }
+
+      canvas.waveform {
+        height: 130px;
+      }
+
+      #master {
+        padding: 9px 12px;
+      }
+
+      #master-inner {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      #master-controls .control {
+        grid-template-columns: 100px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+      }
+
+      #master-controls .volume-controls {
+        grid-column: 2;
+        grid-template-columns: minmax(0, 1fr) 76px;
+      }
+
+      #master-graphs {
+        gap: 8px;
+      }
+
+      .master-graph canvas {
+        height: 75px;
+      }
+
+      .master-graph-title {
+        font-size: .75rem;
+      }
+
+      .wave-legend {
+        max-height: 24px;
+        font-size: .65rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .control {
+        grid-template-columns: 78px 1fr 65px;
+        gap: 8px;
+      }
+
+      #master {
+        padding: 8px 10px;
+      }
+
+      .master-graph canvas {
+        height: 65px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main>
+    <h1>Sine Wave Tone Generators</h1>
+
+    <div id="tone-list"></div>
+
+    <button id="add-tone" type="button">
+      + Add tone generator
+    </button>
+  </main>
+
+  <footer id="master">
+    <div id="master-inner">
+
+      <!-- Master controls on the left -->
+      <div id="master-controls">
+
+        <div class="tone-header">
+          <strong>Master output</strong>
+          <div class="master-actions">
+            <button id="master-toggle" type="button">
+              Play all
+            </button>
+            <button id="reset-all" type="button">
+              Reset all
+            </button>
+          </div>
+        </div>
+
+        <div class="control">
+          <label for="master-volume">Master volume (%)</label>
+
+          <div class="volume-controls">
+            <input
+              id="master-volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.5"
+            >
+
+            <input
+              id="master-volume-number"
+              class="volume-number"
+              type="number"
+              min="0"
+              max="100"
+              step="any"
+              value="50"
+              aria-label="Master volume in percent"
+            >
+          </div>
+        </div>
+
+        <div class="view-window-control">
+          <label for="view-window-ms">Graph view (ms)</label>
+          <input
+            id="view-window-ms"
+            type="number"
+            min="0.01"
+            step="any"
+            value="10"
+            aria-label="Graph time window in milliseconds"
+          >
+        </div>
+
+        <div class="status" id="master-status" aria-live="polite">
+          Stopped
+        </div>
+
+      </div>
+
+      <!-- Combined graphs on the right -->
+      <div id="master-graphs">
+
+        <div class="master-graph">
+          <strong class="master-graph-title">
+            All tones · overlay
+          </strong>
+          <canvas
+            id="overlay-graph"
+            role="img"
+            aria-label="All tone generator waves overlaid in different colors"
+          ></canvas>
+
+          <div id="wave-legend" class="wave-legend"></div>
+        </div>
+
+        <div class="master-graph">
+          <strong class="master-graph-title">
+            Audio signal · sum
+          </strong>
+          <canvas
+            id="signal-graph"
+            role="img"
+            aria-label="Combined audio signal formed by summing all tone generator sine waves"
+          ></canvas>
+        </div>
+
+      </div>
+
+    </div>
+  </footer>
+
+  <script>
+    const toneList = document.getElementById('tone-list');
+    const masterToggle = document.getElementById('master-toggle');
+    const masterVolume = document.getElementById('master-volume');
+    const masterVolumeNumber = document.getElementById('master-volume-number');
+    const masterStatus = document.getElementById('master-status');
+    const viewWindowInput = document.getElementById('view-window-ms');
+
+    let viewWindowMs = 10;
+    let audioContext = null;
+    let masterGain = null;
+    let tones = [];
+
+    // Color palette for the combined overlay graph
+    const waveColors = [
+      '#d33b32',
+      '#2468c9',
+      '#15945b',
+      '#9a55bd',
+      '#d17b16',
+      '#008c95',
+      '#b34e82',
+      '#65752a'
+    ];
+
+    // Initialize audio
+    function ensureAudio() {
+      if (!audioContext) {
+        audioContext = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
+
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = Number(masterVolume.value);
+        masterGain.connect(audioContext.destination);
+      }
+
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+    }
+
+    // Update master controls and graphs
+    function updateMasterUI() {
+      const playing = tones.filter(
+        tone => tone.oscillator
+      ).length;
+
+      masterToggle.textContent = playing
+        ? 'Stop all'
+        : 'Play all';
+
+      masterStatus.textContent = playing
+        ? `${playing} of ${tones.length} tone(s) playing`
+        : 'Stopped';
+
+      drawMasterGraphs();
+    }
+
+    // Update individual tone controls
+    function updateToneUI(tone) {
+      tone.playButton.textContent = tone.oscillator
+        ? 'Stop'
+        : 'Play';
+
+      tone.status.textContent = tone.oscillator
+        ? 'Playing'
+        : 'Stopped';
+    }
+
+    // Draw an individual sine wave
+    function drawWaveform(tone) {
+      const canvas = tone.canvas;
+
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+
+      if (!rect.width || !rect.height) return;
+
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+
+      const ctx = canvas.getContext('2d');
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const width = rect.width;
+      const height = rect.height;
+      const centerY = height / 2;
+
+      const amplitude = Math.max(
+        1,
+        height * 0.40 * tone.volume
+      );
+
+      const cycles = tone.frequency * (viewWindowMs / 1000);
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Center line
+      ctx.strokeStyle = '#ddd';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(width, centerY);
+      ctx.stroke();
+
+      // Sine wave
+      ctx.strokeStyle = tone.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      for (let x = 0; x <= width; x++) {
+        const phase =
+          (x / width) * cycles * Math.PI * 2;
+
+        const y =
+          centerY - Math.sin(phase) * amplitude;
+
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+
+      ctx.stroke();
+    }
+
+    // Prepare a graph canvas
+    function prepareGraph(canvas) {
+      const rect = canvas.getBoundingClientRect();
+
+      if (!rect.width || !rect.height) return null;
+
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+
+      const context = canvas.getContext('2d');
+
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      context.clearRect(
+        0,
+        0,
+        rect.width,
+        rect.height
+      );
+
+      // Horizontal center line
+      context.strokeStyle = '#ddd';
+      context.lineWidth = 1;
+      context.beginPath();
+
+      context.moveTo(0, rect.height / 2);
+      context.lineTo(rect.width, rect.height / 2);
+
+      context.stroke();
+
+      return {
+        context,
+        width: rect.width,
+        height: rect.height
+      };
+    }
+
+    // Draw both combined graphs
+    function drawMasterGraphs() {
+
+      const overlayCanvas =
+        document.getElementById('overlay-graph');
+
+      const signalCanvas =
+        document.getElementById('signal-graph');
+
+      const overlay = prepareGraph(overlayCanvas);
+      const signal = prepareGraph(signalCanvas);
+
+      if (!overlay || !signal) return;
+
+      const legend =
+        document.getElementById('wave-legend');
+
+      legend.replaceChildren();
+
+      // ==========================================
+      // GRAPH 1: ALL SINE WAVES OVERLAID
+      // ==========================================
+
+      tones.forEach((tone, index) => {
+
+        const color = tone.color;
+
+        // Add a matching legend entry
+        const item = document.createElement('span');
+
+        item.className = 'legend-item';
+        item.style.color = color;
+
+        item.textContent =
+          `● Tone ${tone.id} (${tone.frequency} Hz)`;
+
+        legend.appendChild(item);
+
+        // Draw this tone
+        overlay.context.strokeStyle = color;
+        overlay.context.lineWidth = 1.7;
+        overlay.context.beginPath();
+
+        const amplitude =
+          overlay.height * 0.40 * tone.volume;
+
+        for (let x = 0; x <= overlay.width; x++) {
+
+          const time =
+            (x / overlay.width) * (viewWindowMs / 1000);
+
+          const value =
+            Math.sin(
+              2 * Math.PI * tone.frequency * time
+            );
+
+          const y =
+            overlay.height / 2 -
+            value * amplitude;
+
+          if (x === 0) {
+            overlay.context.moveTo(x, y);
+          } else {
+            overlay.context.lineTo(x, y);
+          }
+        }
+
+        overlay.context.stroke();
+
+      });
+
+      // ==========================================
+      // GRAPH 2: ACTUAL COMBINED AUDIO SIGNAL
+      // ==========================================
+      // The audio output is the sum of the individual sine waves.
+      // Each tone's volume is its amplitude, and master volume
+      // scales the complete mix just as it does in the audio chain.
+      // Use a fixed vertical scale so changing a tone's amplitude
+      // changes the displayed signal amplitude instead of being
+      // canceled out by automatic normalization.
+
+      const masterLevel = Number(masterVolume.value);
+
+      signal.context.strokeStyle = '#222';
+      signal.context.lineWidth = 2;
+      signal.context.beginPath();
+
+      for (let x = 0; x <= signal.width; x++) {
+
+        const time =
+          (x / signal.width) * (viewWindowMs / 1000);
+
+        // Sum the instantaneous output of every generator.
+        let value = 0;
+
+        tones.forEach(tone => {
+          value += tone.volume * Math.sin(
+            2 * Math.PI * tone.frequency * time
+          );
+        });
+
+        // Apply master volume and plot the actual summed amplitude.
+        // Values beyond the canvas range are naturally clipped at its edges.
+        const output = value * masterLevel;
+        const y =
+          signal.height / 2 -
+          output * signal.height * 0.43;
+
+        if (x === 0) {
+          signal.context.moveTo(x, y);
+        } else {
+          signal.context.lineTo(x, y);
+        }
+
+      }
+
+      signal.context.stroke();
+    }
+
+    // Play an individual tone
+    function playTone(tone) {
+
+      if (tone.oscillator) return;
+
+      ensureAudio();
+
+      const oscillator =
+        audioContext.createOscillator();
+
+      const gain =
+        audioContext.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.value = tone.frequency;
+
+      gain.gain.value = tone.volume;
+
+      oscillator.connect(gain);
+      gain.connect(masterGain);
+
+      tone.oscillator = oscillator;
+      tone.gain = gain;
+
+      oscillator.onended = () => {
+
+        if (tone.oscillator === oscillator) {
+
+          tone.oscillator = null;
+          tone.gain = null;
+
+          updateToneUI(tone);
+          updateMasterUI();
+        }
+
+      };
+
+      oscillator.start();
+
+      updateToneUI(tone);
+      updateMasterUI();
+    }
+
+    // Stop an individual tone
+    function stopTone(tone) {
+
+      if (!tone.oscillator) return;
+
+      const oscillator = tone.oscillator;
+
+      tone.oscillator = null;
+      tone.gain = null;
+
+      oscillator.stop();
+      oscillator.disconnect();
+
+      updateToneUI(tone);
+      updateMasterUI();
+    }
+
+    // Keep tone numbers synchronized with their current screen order.
+    function renumberTones() {
+      tones.forEach((tone, index) => {
+        tone.id = index + 1;
+        const title = tone.box.querySelector('.tone-title');
+        if (title) {
+          title.textContent = `Tone ${tone.id}`;
+        }
+        const colorInput = tone.box.querySelector('.tone-color');
+        if (colorInput) {
+          colorInput.setAttribute(
+            'aria-label',
+            `Wave color for Tone Generator ${tone.id}`
+          );
+        }
+      });
+    }
+
+    // Create a new tone generator
+    function addTone() {
+
+      const tone = {
+        id: tones.length + 1,
+        frequency: 440,
+        volume: 0.5,
+        color: waveColors[tones.length % waveColors.length],
+        oscillator: null,
+        gain: null
+      };
+
+      const box = document.createElement('section');
+
+      box.className = 'tone';
+
+      box.innerHTML = `
+        <div class="tone-layout">
+
+          <div>
+
+            <div class="tone-header">
+              <strong class="tone-title">Tone Generator ${tone.id}</strong>
+              <button type="button" class="play-button">
+                Play
+              </button>
+            </div>
+
+            <div class="control">
+              <label>Frequency</label>
+
+              <div class="frequency-controls">
+                <input
+                  class="frequency"
+                  type="range"
+                  min="20"
+                  max="2000"
+                  step="1"
+                  value="440"
+                >
+
+                <input
+                  class="frequency-number"
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  value="440"
+                  aria-label="Frequency in hertz"
+                >
+              </div>
+            </div>
+
+            <div class="control">
+              <label>Volume (%)</label>
+
+              <div class="volume-controls">
+                <input
+                  class="volume"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value="0.5"
+                >
+
+                <input
+                  class="volume-number"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="any"
+                  value="50"
+                  aria-label="Volume in percent"
+                >
+              </div>
+            </div>
+
+            <div class="control">
+              <label>Color</label>
+              <div class="color-controls">
+                <input
+                  class="tone-color"
+                  type="color"
+                  value="${tone.color}"
+                  aria-label="Wave color for Tone Generator ${tone.id}"
+                >
+                <span class="waveform-label">Choose graph color</span>
+              </div>
+            </div>
+
+            <div class="actions">
+              <span class="status">Stopped</span>
+
+              <button type="button" class="remove-button">
+                Remove
+              </button>
+            </div>
+
+          </div>
+
+          <div class="waveform-wrap">
+
+            <span class="waveform-label view-window-label">
+            </span>
+
+            <canvas
+              class="waveform"
+              role="img"
+              aria-label="Sine wave graph for this tone generator"
+            ></canvas>
+
+          </div>
+
+        </div>
+      `;
+
+      tone.oscillator = null;
+      tone.gain = null;
+      tone.box = box;
+
+      tone.playButton =
+        box.querySelector('.play-button');
+
+      tone.status =
+        box.querySelector('.status');
+
+      tone.canvas =
+        box.querySelector('.waveform');
+
+      const frequencySlider =
+        box.querySelector('.frequency');
+
+      const frequencyInput =
+        box.querySelector('.frequency-number');
+
+      const volumeSlider =
+        box.querySelector('.volume');
+
+      const volumeInput =
+        box.querySelector('.volume-number');
+
+      const colorInput =
+        box.querySelector('.tone-color');
+
+      colorInput.addEventListener('input', () => {
+        tone.color = colorInput.value;
+        drawWaveform(tone);
+        drawMasterGraphs();
+      });
+
+      // Keep references so Reset all can restore every tone's controls.
+      tone.frequencySlider = frequencySlider;
+      tone.frequencyInput = frequencyInput;
+      tone.volumeSlider = volumeSlider;
+      tone.volumeInput = volumeInput;
+
+      // Update the frequency from either the slider or number field.
+      function setFrequency(value) {
+        const frequency = Number(value);
+
+        // Accept positive frequencies. The slider itself remains limited
+        // to 20–2000 Hz, so it clamps when a manual value is outside that range.
+        if (!Number.isFinite(frequency) || frequency <= 0) return;
+
+        tone.frequency = frequency;
+
+        // The number field is the single frequency readout; keep the slider
+        // synchronized, clamping it to its supported range when necessary.
+        frequencySlider.value = Math.min(2000, Math.max(20, frequency));
+        frequencyInput.value = frequency;
+
+        // Redraw the individual and combined waveforms.
+        drawWaveform(tone);
+        drawMasterGraphs();
+
+        // Change the sound immediately if this tone is playing.
+        if (tone.oscillator && audioContext) {
+          tone.oscillator.frequency.setTargetAtTime(
+            frequency,
+            audioContext.currentTime,
+            0.015
+          );
+        }
+      }
+
+      // Slider changes update the number field.
+      frequencySlider.addEventListener('input', () => {
+        setFrequency(frequencySlider.value);
+      });
+
+      // Manual typing updates the frequency for any positive value.
+      frequencyInput.addEventListener('input', () => {
+        if (frequencyInput.value === '') return;
+        setFrequency(frequencyInput.value);
+      });
+
+      // Restore the last valid frequency if the field is left blank or invalid.
+      frequencyInput.addEventListener('change', () => {
+        const frequency = Number(frequencyInput.value);
+
+        if (
+          frequencyInput.value === '' ||
+          !Number.isFinite(frequency) ||
+          frequency <= 0
+        ) {
+          frequencyInput.value = tone.frequency;
+        } else {
+          setFrequency(frequency);
+        }
+      });
+
+      // Update volume from either the slider or the manual percentage field.
+      function setVolumePercent(value) {
+        const percent = Number(value);
+
+        if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
+          return;
+        }
+
+        tone.volume = percent / 100;
+        volumeSlider.value = tone.volume;
+        volumeInput.value = percent;
+
+        drawWaveform(tone);
+        drawMasterGraphs();
+
+        if (tone.gain && audioContext) {
+          tone.gain.gain.setTargetAtTime(
+            tone.volume,
+            audioContext.currentTime,
+            0.015
+          );
+        }
+      }
+
+      // Moving the slider updates the percentage input.
+      volumeSlider.addEventListener('input', () => {
+        setVolumePercent(Number(volumeSlider.value) * 100);
+      });
+
+      // Typing a percentage updates the slider and the sound immediately.
+      volumeInput.addEventListener('input', () => {
+        if (volumeInput.value === '') return;
+        setVolumePercent(volumeInput.value);
+      });
+
+      // Restore the last valid value if the field is blank or invalid.
+      volumeInput.addEventListener('change', () => {
+        const percent = Number(volumeInput.value);
+
+        if (
+          volumeInput.value === '' ||
+          !Number.isFinite(percent) ||
+          percent < 0 ||
+          percent > 100
+        ) {
+          volumeInput.value = tone.volume * 100;
+        } else {
+          setVolumePercent(percent);
+        }
+      });
+
+      // Individual play/stop button
+      tone.playButton.addEventListener('click', () => {
+
+        tone.oscillator
+          ? stopTone(tone)
+          : playTone(tone);
+
+      });
+
+      // Remove generator
+      box.querySelector('.remove-button')
+        .addEventListener('click', () => {
+
+          stopTone(tone);
+
+          tones = tones.filter(
+            item => item !== tone
+          );
+
+          box.remove();
+
+          renumberTones();
+          updateMasterUI();
+
+        });
+
+      toneList.appendChild(box);
+
+      tones.push(tone);
+      renumberTones();
+
+      drawWaveform(tone);
+      updateMasterUI();
+
+    }
+
+    // Add tone generator button
+    document.getElementById('add-tone')
+      .addEventListener('click', addTone);
+
+    // Master play/stop button
+    masterToggle.addEventListener('click', () => {
+
+      const anyPlaying = tones.some(
+        tone => tone.oscillator
+      );
+
+      if (anyPlaying) {
+        tones.forEach(stopTone);
+      } else {
+        tones.forEach(playTone);
+      }
+
+      updateMasterUI();
+
+    });
+
+    // Master volume: keep the slider and manual percentage input synchronized.
+    function setMasterVolumePercent(percent) {
+      const value = Number(percent);
+
+      if (!Number.isFinite(value) || value < 0 || value > 100) return;
+
+      const normalizedValue = value / 100;
+      masterVolume.value = normalizedValue;
+      masterVolumeNumber.value = value;
+
+      if (masterGain && audioContext) {
+        masterGain.gain.setTargetAtTime(
+          normalizedValue,
+          audioContext.currentTime,
+          0.015
+        );
+      }
+    }
+
+    // Moving the slider updates the manual percentage field.
+    masterVolume.addEventListener('input', () => {
+      setMasterVolumePercent(Number(masterVolume.value) * 100);
+    });
+
+    // Typing a percentage updates the slider and master output immediately.
+    masterVolumeNumber.addEventListener('input', () => {
+      if (masterVolumeNumber.value === '') return;
+      setMasterVolumePercent(masterVolumeNumber.value);
+    });
+
+    // Restore the last valid value if the field is blank or out of range.
+    masterVolumeNumber.addEventListener('change', () => {
+      const percent = Number(masterVolumeNumber.value);
+
+      if (
+        masterVolumeNumber.value === '' ||
+        !Number.isFinite(percent) ||
+        percent < 0 ||
+        percent > 100
+      ) {
+        masterVolumeNumber.value = Number(masterVolume.value) * 100;
+      } else {
+        setMasterVolumePercent(percent);
+      }
+    });
+
+    // Update the time window used by every individual and combined graph.
+    function setViewWindowMs(value) {
+      const ms = Number(value);
+      if (!Number.isFinite(ms) || ms <= 0) return false;
+
+      viewWindowMs = ms;
+      viewWindowInput.value = String(ms);
+
+
+      tones.forEach(drawWaveform);
+      drawMasterGraphs();
+      return true;
+    }
+
+    viewWindowInput.addEventListener('input', () => {
+      if (viewWindowInput.value === '') return;
+      setViewWindowMs(viewWindowInput.value);
+    });
+
+    viewWindowInput.addEventListener('change', () => {
+      if (!setViewWindowMs(viewWindowInput.value)) {
+        viewWindowInput.value = String(viewWindowMs);
+      }
+    });
+
+    // Reset every adjustable parameter to its default value.
+    // Existing tone generators are retained, but playback is stopped.
+    document.getElementById('reset-all').addEventListener('click', () => {
+
+      // Stop all active oscillators first.
+      tones.slice().forEach(tone => {
+        if (tone.oscillator) {
+          stopTone(tone);
+        }
+      });
+
+      // Restore each tone generator's default frequency, volume, and color.
+      // Colors follow the current top-to-bottom tone order.
+      tones.forEach((tone, index) => {
+        tone.frequency = 440;
+        tone.volume = 0.5;
+        tone.color = waveColors[index % waveColors.length];
+
+        tone.frequencySlider.value = 440;
+        tone.frequencyInput.value = 440;
+        tone.volumeSlider.value = 0.5;
+        tone.volumeInput.value = 50;
+
+        const colorInput = tone.box.querySelector('.tone-color');
+        if (colorInput) colorInput.value = tone.color;
+
+        updateToneUI(tone);
+        drawWaveform(tone);
+      });
+
+      // Restore master volume to 50%.
+      setMasterVolumePercent(50);
+
+      // Restore the graph time window to 10 milliseconds.
+      setViewWindowMs(10);
+
+      // Refresh footer status, combined graphs, and labels.
+      updateMasterUI();
+    });
+
+    // Initialize with one tone generator
+    addTone();
+
+    // Redraw graphs when the window changes size
+    window.addEventListener('resize', () => {
+
+      tones.forEach(drawWaveform);
+
+      drawMasterGraphs();
+
+    });
+
+  </script>
+
+</body>
+</html>
